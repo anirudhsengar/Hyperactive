@@ -4,9 +4,12 @@ import numpy as np
 from skbase.utils.dependencies import _check_soft_dependencies
 
 if _check_soft_dependencies("sktime", severity="none"):
+    from sktime.datatypes import mtype_to_scitype
     from sktime.forecasting.base._delegate import _DelegatedForecaster
 else:
     from skbase.base import BaseEstimator as _DelegatedForecaster
+
+    mtype_to_scitype = None
 
 from hyperactive.experiment.integrations.sktime_forecasting import (
     SktimeForecastingExperiment,
@@ -151,6 +154,14 @@ class ForecastingOptCV(_DelegatedForecaster):
             - "logger_name": str, default="ray"; name of the logger to use.
             - "mute_warnings": bool, default=False; if True, suppresses warnings
 
+    tune_by_instance : bool, optional (default=False)
+        If True, broadcast tuning across individual instances instead of the entire
+        panel. Mimics ``ForecastingGridSearchCV`` broadcasting semantics.
+
+    tune_by_variable : bool, optional (default=False)
+        If True, broadcast tuning across variables (columns) of multivariate series
+        by treating ``y`` as univariate during scoring.
+
     Example
     -------
     Any available tuning engine from hyperactive can be used, for example:
@@ -215,6 +226,8 @@ class ForecastingOptCV(_DelegatedForecaster):
         cv_X=None,
         backend=None,
         backend_params=None,
+        tune_by_instance=False,
+        tune_by_variable=False,
     ):
         self.forecaster = forecaster
         self.optimizer = optimizer
@@ -227,7 +240,19 @@ class ForecastingOptCV(_DelegatedForecaster):
         self.cv_X = cv_X
         self.backend = backend
         self.backend_params = backend_params
+        self.tune_by_instance = tune_by_instance
+        self.tune_by_variable = tune_by_variable
         super().__init__()
+
+        self._set_delegated_tags(forecaster)
+
+        tags_to_clone = ["y_inner_mtype", "X_inner_mtype"]
+        self.clone_tags(forecaster, tags_to_clone)
+        self._extend_to_all_scitypes("y_inner_mtype")
+        self._extend_to_all_scitypes("X_inner_mtype")
+
+        if self.tune_by_variable:
+            self.set_tags(**{"scitype:y": "univariate"})
 
     def _fit(self, y, X, fh):
         """Fit to training data.
@@ -277,6 +302,34 @@ class ForecastingOptCV(_DelegatedForecaster):
             self.best_forecaster_.fit(y=y, X=X, fh=fh)
 
         return self
+
+    def _extend_to_all_scitypes(self, tagname):
+        """Ensure tags cover all scitypes similar to sktime BaseGridSearch."""
+
+        if mtype_to_scitype is None:
+            return
+
+        tagval = self.get_tag(tagname)
+        if not isinstance(tagval, list):
+            tagval = [tagval]
+
+        scitypes = mtype_to_scitype(tagval, return_unique=True)
+
+        if "Series" not in scitypes:
+            tagval = tagval + ["pd.DataFrame"]
+        elif "pd.Series" in tagval and "pd.DataFrame" not in tagval:
+            tagval = ["pd.DataFrame"] + tagval
+
+        if "Panel" not in scitypes:
+            tagval = tagval + ["pd-multiindex"]
+        if "Hierarchical" not in scitypes:
+            tagval = tagval + ["pd_multiindex_hier"]
+
+        if self.tune_by_instance:
+            tagval = [x for x in tagval if mtype_to_scitype(x) == "Series"]
+
+        tagval = list(dict.fromkeys(tagval))
+        self.set_tags(**{tagname: tagval})
 
     def _predict(self, fh, X):
         """Forecast time series at future horizon.
