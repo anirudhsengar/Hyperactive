@@ -8,12 +8,9 @@ from skbase.utils.dependencies import _check_soft_dependencies
 _HAS_SKTIME = _check_soft_dependencies("sktime", severity="none")
 
 if _HAS_SKTIME:
-    from sktime.datatypes import mtype_to_scitype
     from sktime.forecasting.base._delegate import _DelegatedForecaster
 else:
     from skbase.base import BaseEstimator as _DelegatedForecaster
-
-    mtype_to_scitype = None
 
 from hyperactive.experiment.integrations.sktime_forecasting import (
     SktimeForecastingExperiment,
@@ -335,8 +332,7 @@ class ForecastingOptCV(_DelegatedForecaster):
 
     def _extend_to_all_scitypes(self, tagname):
         """Ensure mtypes for all scitypes are present in tag ``tagname``."""
-        if not _HAS_SKTIME:
-            return
+        from sktime.datatypes import mtype_to_scitype
 
         tagval = self.get_tag(tagname)
         if not isinstance(tagval, list):

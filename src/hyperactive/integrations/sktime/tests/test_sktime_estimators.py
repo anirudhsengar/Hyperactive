@@ -29,7 +29,10 @@ def test_sktime_estimator(estimator):
     # It will raise an error if the estimator is not API conformant.
 
 
-@pytest.mark.skipif(not EST_TO_TEST, reason="sktime not installed")
+@pytest.mark.skipif(
+    not _check_soft_dependencies("sktime", severity="none"),
+    reason="sktime not installed",
+)
 def test_forecasting_opt_cv_sets_attributes():
     """ForecastingOptCV exposes useful attributes after fitting."""
     fh = [1, 2]
@@ -56,7 +59,10 @@ def test_forecasting_opt_cv_sets_attributes():
     assert np.isclose(tuner.best_score_, tuner.cv_results_[metric_col].mean())
 
 
-@pytest.mark.skipif(not EST_TO_TEST, reason="sktime not installed")
+@pytest.mark.skipif(
+    not _check_soft_dependencies("sktime", severity="none"),
+    reason="sktime not installed",
+)
 def test_forecasting_opt_cv_tune_by_flags():
     """Tune-by flags should adjust estimator tags."""
     tuner = ForecastingOptCV(
