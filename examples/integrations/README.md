@@ -99,14 +99,6 @@ y_pred = tuned_naive.predict()
 # 4. obtaining best parameters and best forecaster
 best_params = tuned_naive.best_params_
 best_forecaster = tuned_naive.best_forecaster_
-
-# Broadcasting options & diagnostics
-
-``ForecastingOptCV`` mirrors ``ForecastingGridSearchCV`` by exposing
-``tune_by_instance`` and ``tune_by_variable`` flags for automatic sktime
-broadcasting over panel or multivariate data. After ``fit`` completes you also
-gain access to ``best_score_``, ``cv_results_`` (per-fold backtesting results),
-``n_splits_``, ``scorer_``, and ``refit_time_`` for downstream inspection.
 ```
 
 ## Integration with sktime - time series classification

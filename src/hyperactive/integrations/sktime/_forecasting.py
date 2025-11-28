@@ -202,6 +202,27 @@ class ForecastingOptCV(_DelegatedForecaster):
     3. obtaining best parameters and best forecaster
     >>> best_params = tuned_naive.best_params_
     >>> best_forecaster = tuned_naive.best_forecaster_
+
+    Attributes
+    ----------
+    best_params_ : dict
+        Best parameter values returned by the optimizer.
+    best_forecaster_ : estimator
+        Fitted estimator with the best parameters.
+    best_score_ : float
+        Score of the best model (according to ``scoring``, after hyperactive's
+        "higher-is-better" normalization).
+    best_index_ : int or None
+        Index of the best parameter combination if the optimizer exposes it.
+    scorer_ : BaseMetric
+        The scoring object resolved by ``check_scoring``.
+    n_splits_ : int or None
+        Number of splits produced by ``cv`` (if the splitter exposes it).
+    cv_results_ : pd.DataFrame or None
+        Evaluation table returned by ``sktime.evaluate`` for the winning parameters.
+        (Full per-candidate traces require the optimizer to provide detailed metadata.)
+    refit_time_ : float
+        Time in seconds to refit the best forecaster when ``refit=True``.
     """
 
     _tags = {
